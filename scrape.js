@@ -38,6 +38,27 @@ async function runUnit(u, now) {
   return r.value;
 }
 
+/* Known errors on motorsport.com, checked against the official calendar. Each fix applies only while the site still
+   shows the wrong value, so it stops by itself once motorsport.com corrects it, and every applied fix is noted in
+   status.json and in the sheet's "Last update" cell. */
+const FIXES = [
+  { // official 2027 calendar (corp.formula1.com, 16 Sep 2026): Austin 22-24 October; motorsport.com lists only 22 October
+    tab: "Schedule", where: { "Season": 2027, "Event": "United States GP" },
+    set: { "Event Main Date (local)": ["2027-10-22", "2027-10-24"] },
+  },
+];
+function applyFixes(tabs, warns) {
+  for (const f of FIXES) {
+    const v = tabs[f.tab], col = name => v[0].indexOf(name);
+    let n = 0;
+    for (const r of v.slice(1)) {
+      if (!Object.keys(f.where).every(k => r[col(k)] === f.where[k])) continue;
+      for (const [k, [from, to]] of Object.entries(f.set)) if (r[col(k)] === from) { r[col(k)] = to; n++; }
+    }
+    if (n) warns.push("corrected " + f.where.Event + " " + f.where.Season + " " + Object.keys(f.set).join(", ") + " to the official calendar");
+  }
+}
+
 (async () => {
   const now = Date.now(), acc = {}, warns = [];
   const queue = core.plan(now);
@@ -53,6 +74,7 @@ async function runUnit(u, now) {
 
   const tabs = {}, rows = {};
   for (const t of Object.keys(core.TABS)) { tabs[t] = core.toValues(t, acc[t] || []); rows[t] = tabs[t].length - 1; }
+  applyFixes(tabs, warns);
 
   /* site-change guards against last week's file */
   const prevFile = path.join(OUT, "tabs.json");
