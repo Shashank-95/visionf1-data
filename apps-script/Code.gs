@@ -111,6 +111,7 @@ function vfStatus_(msg) {
   sh.getRange(row, 1, 1, 2).setNumberFormat("@").setValues([["Last update", msg]]);
 }
 function vfFail_(msg) {
+  msg = msg.replace(/\.?$/, ".");
   vfStatus_("FAILED " + vfNow_() + ": " + msg + " Last week's data is unchanged.");
   if (VF_CONFIG.NOTIFY_EMAIL) {
     try { MailApp.sendEmail(Session.getEffectiveUser().getEmail(), "VisionF1 F1 data update failed", msg + "\n\nThe sheet still holds last week's data. Run updateNow() from Extensions > Apps Script to retry."); } catch (e) {}
