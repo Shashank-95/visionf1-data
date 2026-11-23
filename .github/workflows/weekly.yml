@@ -1,0 +1,35 @@
+name: Weekly F1 data scrape
+
+on:
+  schedule:
+    # Mondays 06:00 and 07:00 IST (two tries, GitHub can delay scheduled runs).
+    # The sheet's Apps Script reads the result at 08:00 IST.
+    - cron: "30 0 * * 1"
+    - cron: "30 1 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Scrape motorsport.com
+        run: node scrape.js
+      - name: Publish data
+        run: |
+          git config user.name "visionf1-data-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tabs.json data/status.json
+          git commit -m "Weekly F1 data $(date -u +%Y-%m-%d)" || exit 0
+          git push
